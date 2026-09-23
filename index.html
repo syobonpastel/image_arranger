@@ -8,22 +8,27 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;700;900&family=Noto+Serif+JP:wght@400;700&family=M+PLUS+Rounded+1c:wght@400;700&family=Zen+Maru+Gothic:wght@400;700&family=Dela+Gothic+One&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="style.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js" defer></script>
 </head>
 <body>
   <header>
     <h1>Image Arranger</h1>
-    <p class="sub">画像を貼り付け（⌘V / Ctrl+V）・ドロップ・選択して、SNS用サイズに整形</p>
+    <p class="sub">画像を貼り付け（⌘V / Ctrl+V）・ドロップ・選択して、SNS用サイズに整形。複数枚はタブで切り替え</p>
   </header>
 
   <main>
     <section class="stage-wrap">
-      <div id="stage" class="stage">
+      <div class="tabs" id="tabs" role="tablist">
+        <label class="tab-add" title="画像を追加">＋<input id="fileInputTab" type="file" accept="image/*" multiple hidden></label>
+      </div>
+
+      <div id="stage" class="stage empty">
         <canvas id="canvas"></canvas>
         <div id="brushCursor" class="brush-cursor" hidden></div>
         <div id="dropHint" class="drop-hint">
-          <p>ここに画像をドロップ<br>または ⌘V / Ctrl+V で貼り付け</p>
+          <p>ここに画像をドロップ（複数可）<br>または ⌘V / Ctrl+V で貼り付け</p>
           <div class="row">
-            <label class="btn primary">画像を選択<input id="fileInput" type="file" accept="image/*" hidden></label>
+            <label class="btn primary">画像を選択<input id="fileInput" type="file" accept="image/*" multiple hidden></label>
             <button id="pasteBtn" class="btn">クリップボードから貼り付け</button>
           </div>
         </div>
@@ -43,16 +48,8 @@
     <aside class="panel">
       <details open>
         <summary>サイズ・配置</summary>
-        <label>出力サイズ
-          <select id="preset">
-            <option value="1080x1350">Instagram 縦 4:5（1080×1350）</option>
-            <option value="1080x1080">Instagram 正方形 1:1（1080×1080）</option>
-            <option value="1080x1920">Instagram ストーリーズ 9:16（1080×1920）</option>
-            <option value="1080x566">Instagram 横 1.91:1（1080×566）</option>
-            <option value="1600x900">X / Twitter 横 16:9（1600×900）</option>
-            <option value="1080x1350x">X / Twitter 縦 4:5（1080×1350）</option>
-            <option value="1200x1200">X / Twitter 正方形 1:1（1200×1200）</option>
-          </select>
+        <label>編集中のサイズ
+          <select id="preset"></select>
         </label>
         <label>背景色
           <input id="bg" type="color" value="#ffffff">
@@ -62,21 +59,38 @@
         </label>
         <div class="row">
           <span class="lbl">画像の位置</span>
-          <button class="btn sm" data-align="top">上寄せ</button>
+          <button class="btn sm" data-align="top">上</button>
+          <button class="btn sm" data-align="bottom">下</button>
+          <button class="btn sm" data-align="left">左</button>
+          <button class="btn sm" data-align="right">右</button>
           <button class="btn sm" data-align="center">中央</button>
-          <button class="btn sm" data-align="bottom">下寄せ</button>
         </div>
-        <p class="hint">「移動」モードで画像をドラッグしても位置を変えられます。</p>
+        <p class="hint">位置・大きさはサイズごとに別々に記憶されます。「移動」モードで画像をドラッグしても動かせます。</p>
       </details>
 
       <details open>
         <summary>文字</summary>
-        <label>上の余白の文字
+        <label>文字1（上 / 左の余白）
           <textarea id="textTop" rows="2" placeholder="例: 2026.09.23 プラネタリウム"></textarea>
         </label>
-        <label>下の余白の文字
+        <label>文字2（下 / 右の余白）
           <textarea id="textBottom" rows="2" placeholder="例: #天文部"></textarea>
         </label>
+        <div class="grid2">
+          <label>文字の位置
+            <select id="textPlace">
+              <option value="auto">自動（余白の広い側）</option>
+              <option value="tb">上下</option>
+              <option value="lr">左右</option>
+            </select>
+          </label>
+          <label>左右のときの書き方
+            <select id="sideWriting">
+              <option value="vertical">縦書き</option>
+              <option value="horizontal">横書き</option>
+            </select>
+          </label>
+        </div>
         <label>フォント
           <select id="font">
             <option value="Noto Sans JP">Noto Sans JP（ゴシック）</option>
@@ -105,12 +119,12 @@
           <label>揃え
             <select id="align">
               <option value="center">中央</option>
-              <option value="left">左</option>
-              <option value="right">右</option>
+              <option value="left">左（縦書きは上）</option>
+              <option value="right">右（縦書きは下）</option>
             </select>
           </label>
         </div>
-        <p class="hint">文字・フォント・色などの設定はCookieに自動保存されます。</p>
+        <p class="hint">文字の設定は全タブ共通で、Cookieに自動保存されます。</p>
       </details>
 
       <details open>
@@ -131,6 +145,8 @@
 
       <details open>
         <summary>書き出し</summary>
+        <span class="lbl">書き出すサイズ（複数選択可）</span>
+        <div id="exportSizes" class="checks"></div>
         <label>形式
           <select id="format">
             <option value="image/jpeg">JPEG（高画質）</option>
@@ -138,11 +154,14 @@
           </select>
         </label>
         <div class="row">
-          <button id="downloadBtn" class="btn primary" disabled>⬇ ダウンロード</button>
-          <button id="shareBtn" class="btn" disabled hidden>共有…</button>
-          <button id="copyBtn" class="btn" disabled>コピー</button>
+          <button id="downloadBtn" class="btn primary" disabled>⬇ このタブを書き出し</button>
+          <button id="downloadAllBtn" class="btn" disabled>⬇ 全タブを書き出し</button>
         </div>
-        <label class="btn subtle">別の画像を開く<input id="fileInput2" type="file" accept="image/*" hidden></label>
+        <div class="row">
+          <button id="copyBtn" class="btn" disabled>表示中の画像をコピー</button>
+          <button id="shareBtn" class="btn" disabled hidden>共有…</button>
+        </div>
+        <p class="hint">2枚以上になるときはZIPにまとめてダウンロードします。</p>
       </details>
     </aside>
   </main>

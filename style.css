@@ -177,3 +177,67 @@ input[type=color] {
   font-size: 14px;
   z-index: 10;
 }
+
+/* タブ */
+.tabs {
+  display: flex;
+  gap: 6px;
+  overflow-x: auto;
+  padding-bottom: 8px;
+  scrollbar-width: thin;
+}
+.tab {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  max-width: 200px;
+  padding: 4px 6px 4px 4px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--panel);
+  color: var(--text);
+  font: inherit;
+  font-size: 13px;
+  cursor: pointer;
+}
+.tab.active { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent); }
+.tab img { width: 32px; height: 32px; object-fit: cover; border-radius: 4px; flex: none; }
+.tab .name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.tab .close {
+  flex: none;
+  border: 0;
+  background: none;
+  color: var(--muted);
+  font-size: 16px;
+  line-height: 1;
+  padding: 2px 4px;
+  cursor: pointer;
+  border-radius: 4px;
+}
+.tab .close:hover { background: var(--bg); color: var(--text); }
+.tab-add {
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 42px;
+  min-height: 42px;
+  margin: 0;
+  border: 1px dashed var(--border);
+  border-radius: 8px;
+  color: var(--muted);
+  font-size: 20px;
+  cursor: pointer;
+}
+
+/* 書き出しサイズのチェック */
+.checks { display: grid; gap: 4px; margin-top: 6px; }
+.checks label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  color: var(--text);
+  font-size: 13px;
+}
