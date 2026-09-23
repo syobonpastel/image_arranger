@@ -15,7 +15,7 @@
 
 公開版: https://syobonpastel.github.io/image_arranger/
 
-ローカルで動かす場合（）:
+ローカルで動かす場合（ビルド不要の静的サイト）:
 
 ```bash
 python3 -m http.server 8000
