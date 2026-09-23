@@ -13,7 +13,9 @@
 
 ## 使い方
 
-ビルド不要の静的サイトです。
+公開版: https://syobonpastel.github.io/image_arranger/
+
+ローカルで動かす場合（）:
 
 ```bash
 python3 -m http.server 8000
