@@ -1,0 +1,22 @@
+# macOS
+.DS_Store
+._*
+
+# エディタ
+.vscode/
+.idea/
+*.swp
+*~
+
+# Node（将来ツールを入れた場合用）
+node_modules/
+npm-debug.log*
+
+# 環境変数・ローカル設定
+.env
+.env.*
+.claude/settings.local.json
+
+# 書き出した画像やテスト用素材
+arranged_*.jpg
+arranged_*.png

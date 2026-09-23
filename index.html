@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Image Arranger</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;700;900&family=Noto+Serif+JP:wght@400;700&family=M+PLUS+Rounded+1c:wght@400;700&family=Zen+Maru+Gothic:wght@400;700&family=Dela+Gothic+One&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header>
+    <h1>Image Arranger</h1>
+    <p class="sub">画像を貼り付け（⌘V / Ctrl+V）・ドロップ・選択して、SNS用サイズに整形</p>
+  </header>
+
+  <main>
+    <section class="stage-wrap">
+      <div id="stage" class="stage">
+        <canvas id="canvas"></canvas>
+        <div id="brushCursor" class="brush-cursor" hidden></div>
+        <div id="dropHint" class="drop-hint">
+          <p>ここに画像をドロップ<br>または ⌘V / Ctrl+V で貼り付け</p>
+          <div class="row">
+            <label class="btn primary">画像を選択<input id="fileInput" type="file" accept="image/*" hidden></label>
+            <button id="pasteBtn" class="btn">クリップボードから貼り付け</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="toolbar">
+        <div class="seg" id="modeSeg">
+          <button data-mode="move" class="active">✋ 移動</button>
+          <button data-mode="blur">🖌 ぼかしペン</button>
+          <button data-mode="erase">🧽 ぼかし消し</button>
+        </div>
+        <button id="undoBtn" class="btn">↶ 元に戻す</button>
+        <button id="clearBlurBtn" class="btn">ぼかし全消去</button>
+      </div>
+    </section>
+
+    <aside class="panel">
+      <details open>
+        <summary>サイズ・配置</summary>
+        <label>出力サイズ
+          <select id="preset">
+            <option value="1080x1350">Instagram 縦 4:5（1080×1350）</option>
+            <option value="1080x1080">Instagram 正方形 1:1（1080×1080）</option>
+            <option value="1080x1920">Instagram ストーリーズ 9:16（1080×1920）</option>
+            <option value="1080x566">Instagram 横 1.91:1（1080×566）</option>
+            <option value="1600x900">X / Twitter 横 16:9（1600×900）</option>
+            <option value="1080x1350x">X / Twitter 縦 4:5（1080×1350）</option>
+            <option value="1200x1200">X / Twitter 正方形 1:1（1200×1200）</option>
+          </select>
+        </label>
+        <label>背景色
+          <input id="bg" type="color" value="#ffffff">
+        </label>
+        <label>画像の大きさ <output id="scaleOut">100%</output>
+          <input id="scale" type="range" min="20" max="300" value="100">
+        </label>
+        <div class="row">
+          <span class="lbl">画像の位置</span>
+          <button class="btn sm" data-align="top">上寄せ</button>
+          <button class="btn sm" data-align="center">中央</button>
+          <button class="btn sm" data-align="bottom">下寄せ</button>
+        </div>
+        <p class="hint">「移動」モードで画像をドラッグしても位置を変えられます。</p>
+      </details>
+
+      <details open>
+        <summary>文字</summary>
+        <label>上の余白の文字
+          <textarea id="textTop" rows="2" placeholder="例: 2026.09.23 プラネタリウム"></textarea>
+        </label>
+        <label>下の余白の文字
+          <textarea id="textBottom" rows="2" placeholder="例: #天文部"></textarea>
+        </label>
+        <label>フォント
+          <select id="font">
+            <option value="Noto Sans JP">Noto Sans JP（ゴシック）</option>
+            <option value="Noto Serif JP">Noto Serif JP（明朝）</option>
+            <option value="M PLUS Rounded 1c">M PLUS Rounded 1c（丸ゴ）</option>
+            <option value="Zen Maru Gothic">Zen Maru Gothic（丸ゴ）</option>
+            <option value="Dela Gothic One">Dela Gothic One（極太）</option>
+          </select>
+        </label>
+        <div class="grid2">
+          <label>文字サイズ <output id="sizeOut">56</output>
+            <input id="size" type="range" min="16" max="200" value="56">
+          </label>
+          <label>文字色
+            <input id="color" type="color" value="#222222">
+          </label>
+        </div>
+        <div class="grid2">
+          <label>太さ
+            <select id="weight">
+              <option value="400">標準</option>
+              <option value="700" selected>太字</option>
+              <option value="900">極太</option>
+            </select>
+          </label>
+          <label>揃え
+            <select id="align">
+              <option value="center">中央</option>
+              <option value="left">左</option>
+              <option value="right">右</option>
+            </select>
+          </label>
+        </div>
+        <p class="hint">文字・フォント・色などの設定はCookieに自動保存されます。</p>
+      </details>
+
+      <details open>
+        <summary>ぼかしペン</summary>
+        <label>ペンの太さ <output id="brushOut">60</output>
+          <input id="brush" type="range" min="10" max="300" value="60">
+        </label>
+        <label>ぼかしの強さ <output id="strengthOut">20</output>
+          <input id="strength" type="range" min="2" max="60" value="20">
+        </label>
+        <label>種類
+          <select id="blurType">
+            <option value="blur">ぼかし</option>
+            <option value="mosaic">モザイク</option>
+          </select>
+        </label>
+      </details>
+
+      <details open>
+        <summary>書き出し</summary>
+        <label>形式
+          <select id="format">
+            <option value="image/jpeg">JPEG（高画質）</option>
+            <option value="image/png">PNG</option>
+          </select>
+        </label>
+        <div class="row">
+          <button id="downloadBtn" class="btn primary" disabled>⬇ ダウンロード</button>
+          <button id="shareBtn" class="btn" disabled hidden>共有…</button>
+          <button id="copyBtn" class="btn" disabled>コピー</button>
+        </div>
+        <label class="btn subtle">別の画像を開く<input id="fileInput2" type="file" accept="image/*" hidden></label>
+      </details>
+    </aside>
+  </main>
+
+  <div id="toast" class="toast" hidden></div>
+  <script src="app.js"></script>
+</body>
+</html>
