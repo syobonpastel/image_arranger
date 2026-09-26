@@ -791,12 +791,6 @@
     return new Promise((res) => c.canvas.toBlob(res, type, 0.95));
   }
 
-  function stamp() {
-    const d = new Date();
-    const z = (n) => String(n).padStart(2, '0');
-    return `${d.getFullYear()}${z(d.getMonth() + 1)}${z(d.getDate())}_${z(d.getHours())}${z(d.getMinutes())}${z(d.getSeconds())}`;
-  }
-
   function safeName(s) {
     return s.replace(/[\\/:*?"<>|\s]+/g, '_').slice(0, 60) || 'image';
   }
@@ -827,33 +821,18 @@
     const jobs = [];
     targets.forEach((doc) => sizes.forEach((preset) => jobs.push({ doc, preset })));
 
-    if (jobs.length === 1) {
-      const { doc, preset } = jobs[0];
-      downloadBlob(await renderBlob(doc, preset, type), fileName(doc, preset));
-      return;
+    if (jobs.length > 1) toast(`${jobs.length}枚を書き出し中…`);
+    const used = new Set();
+    for (const [i, { doc, preset }] of jobs.entries()) {
+      let n = fileName(doc, preset);
+      // タブ名が同じ画像があってもファイル名が被らないようにする
+      for (let k = 2; used.has(n); k++) n = fileName(doc, preset).replace(/(\.\w+)$/, `_${k}$1`);
+      used.add(n);
+      downloadBlob(await renderBlob(doc, preset, type), n);
+      // 連続ダウンロードがブラウザに間引かれないよう少し間を空ける
+      if (i < jobs.length - 1) await new Promise((r) => setTimeout(r, 400));
     }
-
-    if (window.JSZip) {
-      toast(`${jobs.length}枚を書き出し中…`);
-      const zip = new JSZip();
-      const used = new Set();
-      for (const { doc, preset } of jobs) {
-        let n = fileName(doc, preset);
-        // タブ名が同じ画像があってもファイル名が被らないようにする
-        for (let i = 2; used.has(n); i++) n = fileName(doc, preset).replace(/(\.\w+)$/, `_${i}$1`);
-        used.add(n);
-        zip.file(n, await renderBlob(doc, preset, type));
-      }
-      const blob = await zip.generateAsync({ type: 'blob' });
-      downloadBlob(blob, `arranged_${stamp()}.zip`);
-      toast(`${jobs.length}枚をZIPで保存しました`);
-    } else {
-      // ZIPライブラリが読めない環境では1枚ずつ保存
-      for (const { doc, preset } of jobs) {
-        downloadBlob(await renderBlob(doc, preset, type), fileName(doc, preset));
-        await new Promise((r) => setTimeout(r, 400));
-      }
-    }
+    if (jobs.length > 1) toast(`${jobs.length}枚を保存しました`);
   }
 
   $('downloadBtn').addEventListener('click', () => active && exportDocs([active]));
