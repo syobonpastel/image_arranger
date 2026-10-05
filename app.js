@@ -172,6 +172,8 @@
       layerDirty: true,
       strokes: [],
       layouts: {}, // presetId -> {scale, offX, offY}
+      quarter: 0,  // 90度単位の回転（0〜3）
+      fine: 0,     // 微調整の角度（度）
       thumb: th.toDataURL('image/jpeg', 0.7),
     };
     docs.push(doc);
@@ -248,6 +250,9 @@
     const pct = active ? Math.round(getLayout(active, currentPreset().id).scale * 100) : 100;
     $('scale').value = pct;
     $('scaleOut').textContent = `${pct}%`;
+    const fine = active ? active.fine : 0;
+    $('rotate').value = fine;
+    $('rotateOut').textContent = `${active ? active.quarter * 90 + fine : 0}°`;
   }
 
   // ---------- ぼかし ----------
@@ -348,10 +353,27 @@
     const { W, H } = preset;
     const lay = getLayout(doc, preset.id);
     const { width: iw, height: ih } = doc.src;
-    const s = Math.min(W / iw, H / ih) * lay.scale;
-    const w = iw * s;
-    const h = ih * s;
-    return { x: (W - w) / 2 + lay.offX, y: (H - h) / 2 + lay.offY, w, h, s };
+    const rad = (doc.quarter * 90 + doc.fine) * Math.PI / 180;
+    const cos = Math.abs(Math.cos(rad));
+    const sin = Math.abs(Math.sin(rad));
+    // 回転後の外接矩形に収まるように縮尺を決める
+    const bw = iw * cos + ih * sin;
+    const bh = iw * sin + ih * cos;
+    const s = Math.min(W / bw, H / bh) * lay.scale;
+    const w = bw * s;
+    const h = bh * s;
+    const x = (W - w) / 2 + lay.offX;
+    const y = (H - h) / 2 + lay.offY;
+    // x, y, w, h は回転後の外接矩形（余白の判定に使う）
+    return { x, y, w, h, s, rad, cx: x + w / 2, cy: y + h / 2, iw, ih };
+  }
+
+  function drawRotated(c, img, p) {
+    c.save();
+    c.translate(p.cx, p.cy);
+    c.rotate(p.rad);
+    c.drawImage(img, -p.iw * p.s / 2, -p.ih * p.s / 2, p.iw * p.s, p.ih * p.s);
+    c.restore();
   }
 
   function textStyle() {
@@ -517,9 +539,9 @@
     const p = computePlacement(doc, preset);
     c.imageSmoothingEnabled = true;
     c.imageSmoothingQuality = 'high';
-    c.drawImage(doc.src, p.x, p.y, p.w, p.h);
+    drawRotated(c, doc.src, p);
     const layer = blurLayer(doc);
-    if (layer) c.drawImage(layer, p.x, p.y, p.w, p.h);
+    if (layer) drawRotated(c, layer, p);
 
     const st = textStyle();
     const t1 = $('textTop').value;
@@ -563,8 +585,16 @@
     ];
   }
 
+  // キャンバス座標 → 元画像の座標（回転を戻す）
   function toImageXY(cxy) {
-    return [(cxy[0] - place.x) / place.s, (cxy[1] - place.y) / place.s];
+    const dx = cxy[0] - place.cx;
+    const dy = cxy[1] - place.cy;
+    const cos = Math.cos(place.rad);
+    const sin = Math.sin(place.rad);
+    return [
+      (dx * cos + dy * sin) / place.s + place.iw / 2,
+      (-dx * sin + dy * cos) / place.s + place.ih / 2,
+    ];
   }
 
   function updateBrushCursor(e) {
@@ -686,6 +716,28 @@
       }
       render();
     });
+  });
+
+  document.querySelectorAll('[data-rotate]').forEach((b) => {
+    b.addEventListener('click', () => {
+      if (!active) return;
+      const v = b.dataset.rotate;
+      if (v === 'reset') {
+        active.quarter = 0;
+        active.fine = 0;
+      } else {
+        active.quarter = (active.quarter + Number(v) + 4) % 4;
+      }
+      syncLayoutUI();
+      render();
+    });
+  });
+
+  $('rotate').addEventListener('input', () => {
+    if (!active) return;
+    active.fine = Number($('rotate').value);
+    syncLayoutUI();
+    render();
   });
 
   $('scale').addEventListener('input', () => {
